@@ -1,0 +1,18 @@
+<div class="task-item">
+  <strong>{{ task().title }}</strong>
+  @if (task().completed) {
+    <span>✅ Completada</span>
+  } @else {
+    <span>⏳ Pendiente</span>
+    <button
+      type="button"
+      (click)="onComplete()">
+      Completar
+    </button>
+  }
+  <button
+    type="button"
+    (click)="onDelete()">
+    Eliminar
+  </button>
+</div>

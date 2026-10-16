@@ -1,0 +1,22 @@
+<h2>{{title}}</h2>
+Total: {{totalTasks()}}
+Completadas: {{completedTasks()}}
+Pendientes: {{pendingTasks()}}
+
+  <app-task-form
+    (taskCreated)="addTask($event)">
+  </app-task-form>
+
+  @for(task of tasks(); track task.id){
+
+  <app-task-item
+    [task]="task"
+    (completeRequest)="completeTask($event)"
+    (deleteRequest)="deleteTask($event)">
+  </app-task-item>
+
+} @empty {
+
+  <p>No existen tareas disponibles.</p>
+
+}
