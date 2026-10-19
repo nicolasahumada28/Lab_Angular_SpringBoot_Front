@@ -1,0 +1,17 @@
+<h2>Detalle de Tarea</h2>
+@if(task(); as currentTask){
+    <article>
+        <p><strong>ID:</strong> {{currentTask.id}}</p>
+        <p><strong>Título:</strong> {{currentTask.title}}</p>
+        <p><strong>Estado:</strong>
+            @if(currentTask.completed){
+                Completada
+            } @else{
+                Pendiente
+            }
+        </p>
+    </article>
+} @else{
+    <p>No se encontó Tarea con el ID {{id}}</p>
+}
+<button type="button" (click)="goBack()">Volver a la lista</button>
