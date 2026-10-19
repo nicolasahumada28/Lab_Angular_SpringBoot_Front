@@ -1,21 +1,25 @@
-import { Component, output} from '@angular/core';
+import { Component, inject, output} from '@angular/core';
 import { FormControl,
   FormGroup,
   ReactiveFormsModule,
   Validators
  } from '@angular/forms';
+ import { Router, RouterLink } from '@angular/router';
+ import { TaskService } from '../services/task/task';
+
 
 @Component({
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   selector: 'app-task-form',
   styleUrl: './task-form.css',
   templateUrl: './task-form.html',
 })
 export class TaskForm {
 
-  taskCreated = output<string>();
+  private readonly taskService = inject(TaskService);
+  private readonly router = inject(Router);
 
-  taskform = new FormGroup({
+  readonly taskform = new FormGroup({
     title: new FormControl('', {
       nonNullable: true,
       validators: [
@@ -33,11 +37,11 @@ export class TaskForm {
 
     const title = this.taskform.controls.title.value.trim();
 
-    if(!title){
-      return;
+    if(title.length <3){
+      this.taskform.controls.title.setErrors({minlength: true});
     }
 
-    this.taskCreated.emit(title);
-    this.taskform.reset();
+    this.taskService.addTask(title);
+    this.router.navigate(['/tasks']);
   }
 }
