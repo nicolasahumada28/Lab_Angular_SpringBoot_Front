@@ -2,7 +2,7 @@ import { computed, effect, inject, Injectable, PLATFORM_ID, signal } from '@angu
 import { Task } from '../../models/task';
 import { isPlatformBrowser } from '@angular/common';
 import { TaskApi } from './task-api';
-import { finalize } from 'rxjs';
+import { catchError, finalize, Observable, tap, throwError, timeout } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -16,10 +16,17 @@ export class TaskService {
 
   private readonly taskApiService = inject(TaskApi);
 
-  readonly loadingSignal = signal(false);
+  private readonly loadingSignal = signal(false);
   readonly loading = this.loadingSignal.asReadonly();
-  readonly errorSignal = signal<string | null>(null);
+
+  private readonly errorSignal = signal<string | null>(null);
   readonly error = this.errorSignal.asReadonly();
+
+  private readonly creatingSignal = signal(false);
+  readonly creating = this.creatingSignal.asReadonly();
+
+  private readonly createErrorSignal = signal<string | null>(null);
+  readonly createError = this.createErrorSignal.asReadonly();
 
   private readonly initialTasks: Task[] = [
     {
@@ -72,12 +79,62 @@ export class TaskService {
       completed: false
     };
 
-    this.tasksSignal.update(tasks => [
-      ...tasks,
-      newTask
-    ]);
+    this.tasksSignal.update(tasks => [...tasks, newTask]);
     return newTask;
   }
+
+    createTaskFromApi(title: string): Observable<Task> {
+  const cleanTitle = title.trim();
+
+  this.creatingSignal.set(true);
+  this.createErrorSignal.set(null);
+
+  return this.taskApiService
+    .createTask({
+      title: cleanTitle,
+      completed: false
+    })
+    .pipe(
+      timeout(5000),
+
+      tap(createdTask => {
+        this.tasksSignal.update(currentTasks => {
+          const nextId = currentTasks.length === 0
+            ? 1
+            : Math.max(
+                ...currentTasks.map(task => task.id)
+              ) + 1;
+
+          const localTask: Task = {
+            ...createdTask,
+            id: nextId
+          };
+
+          return [
+            ...currentTasks,
+            localTask
+          ];
+        });
+      }),
+
+      catchError(error => {
+        console.error(
+          'Error al crear la tarea:',
+          error
+        );
+
+        this.createErrorSignal.set(
+          'No fue posible crear la tarea.'
+        );
+
+        return throwError(() => error);
+      }),
+
+      finalize(() => {
+        this.creatingSignal.set(false);
+      })
+    );
+}
 
   completeTask(id: number): void {
     this.tasksSignal.update(tasks =>
@@ -134,12 +191,19 @@ export class TaskService {
   }
 
   loadTasksFromApi(): void {
+
+    if(!this.isBrowser) {
+      return;
+    }
+
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
 
-    this.taskApiService.getTasks().pipe(finalize(() => {
-      this.loadingSignal.set(false);
-    })
+    this.taskApiService.getTasks().pipe(
+      timeout(5000),
+      finalize(() => {
+        this.loadingSignal.set(false);
+      })
     ).subscribe({
       next: tasks => {
         this.tasksSignal.set(tasks);
