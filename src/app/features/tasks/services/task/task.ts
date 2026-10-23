@@ -3,6 +3,7 @@ import { Task } from '../../models/task';
 import { isPlatformBrowser } from '@angular/common';
 import { TaskApi } from './task-api';
 import { catchError, finalize, Observable, tap, throwError, timeout } from 'rxjs';
+import { time } from 'node:console';
 
 @Injectable({
   providedIn: 'root'
@@ -27,6 +28,18 @@ export class TaskService {
 
   private readonly createErrorSignal = signal<string | null>(null);
   readonly createError = this.createErrorSignal.asReadonly();
+
+  private readonly updatingSignal = signal(false);
+  readonly updating = this.updatingSignal.asReadonly();
+
+  private readonly updateErrorSignal = signal<string | null>(null);
+  readonly updateError = this.updateErrorSignal.asReadonly();
+
+  private readonly deletingSignal = signal(false);
+  readonly deleting = this.deletingSignal.asReadonly();
+
+  private readonly deleteErrorSignal = signal<string | null>(null);
+  readonly deleteError = this.deleteErrorSignal.asReadonly();
 
   private readonly initialTasks: Task[] = [
     {
@@ -135,6 +148,68 @@ export class TaskService {
       })
     );
 }
+
+completeTaskFromApi(id: number): Observable<Task> {
+
+  this.updatingSignal.set(true);
+  this.updateErrorSignal.set(null);
+
+  return this.taskApiService
+    .updateTask(id, 
+      {
+        completed: true
+      })
+      .pipe(
+        timeout(5000),
+        tap(() => {
+          this.tasksSignal.update(tasks =>
+            tasks.map(task =>
+              task.id === id
+              ? {
+                ...task,
+                completed: true
+              }
+              : task
+            )
+          );
+        }),
+        
+        catchError(error => {
+          console.error('Error al actualizar la tarea: ', error);
+          this.updateErrorSignal.set('No fue posible actualizar la tarea.');
+          return throwError(() => error);
+        }),
+        finalize(() => {
+          this.updatingSignal.set(false);
+        })
+      );
+}
+
+deleteTaskFromApi(id: number): Observable<void> {
+  this.deletingSignal.set(true);
+  this.deleteErrorSignal.set(null);
+
+  return this.taskApiService
+    .deleteTask(id)
+    .pipe(
+      timeout(5000),
+      tap(() => {
+        this.tasksSignal.update(tasks => 
+          tasks.filter(task => task.id !== id)
+        );
+      }),
+      catchError(error => {
+        console.error('Error al eliminar la tarea: ',error);
+        this.deleteErrorSignal.set('No fue posible eliminar la tarea.');
+
+        return throwError(() => error);
+      }),
+      finalize(() => {
+        this.deletingSignal.set(false);
+      })
+    );
+  }
+
 
   completeTask(id: number): void {
     this.tasksSignal.update(tasks =>

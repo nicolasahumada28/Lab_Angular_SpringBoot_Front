@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
-import { Task, CreateTaskRequest } from '../../models/task';
+import { Task, CreateTaskRequest, UpdateTaskRequest } from '../../models/task';
 
 interface TodoApiResponse {
     userId?: number;
@@ -46,5 +46,18 @@ export class TaskApi {
                 completed: response.completed
             }))
         );
+    }
+
+    updateTask(id: number, request: UpdateTaskRequest): Observable<Task> {
+        return this.http.patch<Task>(
+            `${this.apiUrl}/${id}`, request
+        );
+    }
+
+    deleteTask(id: number): Observable<void> {
+        const url = `${this.apiUrl}/${id}`;
+        console.log('DELETE URL: ', url);
+
+        return this.http.delete<void>(url);
     }
 }
