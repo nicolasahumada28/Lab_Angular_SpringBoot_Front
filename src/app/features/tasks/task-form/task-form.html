@@ -1,26 +1,63 @@
-<section>
-    <h2>Nueva Tarea</h2>
-    <form [formGroup]="taskform" (ngSubmit)="onSubmit()">
+<h2>Nueva tarea</h2>
 
-        <div>
-            <label for="title">
-                Título
-            </label>
+<form
+  [formGroup]="taskform"
+  (ngSubmit)="onSubmit()"
+>
+  <div>
+    <label for="title">
+      Título
+    </label>
 
-            <input id="title" type="text" formControlName="title" placeholder="Ingrese el título de la tarea">
+    <input
+      id="title"
+      type="text"
+      formControlName="title"
+      placeholder="Ingrese una tarea"
+      [readonly]="creating()"
+    />
 
-            @if(taskform.controls.title.hasError('required') && taskform.controls.title.touched){
-            <p>El título es obligatorio.</p>
-            }
-            @if(taskform.controls.title.hasError('minlength') && taskform.controls.title.touched){
-            <p>El título debe tener al menos 3 caracteres.</p>
-            }
-        </div>
-        <div>
-            <button type="submit" [disabled]="taskform.invalid">
-                Agregar Tarea
-            </button>
-            <a routerLink="/tasks">Cancelar</a>
-        </div>
-    </form>
-</section>
+    @if (
+      taskform.controls.title.touched &&
+      taskform.controls.title.hasError('required')
+    ) {
+      <p class="error-message">
+        El título es obligatorio.
+      </p>
+    }
+
+    @if (
+      taskform.controls.title.touched &&
+      taskform.controls.title.hasError('minlength')
+    ) {
+      <p class="error-message">
+        El título debe tener al menos 3 caracteres.
+      </p>
+    }
+  </div>
+
+  @if (createError(); as errorMessage) {
+    <p class="error-message">
+      {{ errorMessage }}
+    </p>
+  }
+
+  <button
+    type="submit"
+    [disabled]="taskform.invalid || creating()"
+  >
+    @if (creating()) {
+      Guardando...
+    } @else {
+      Guardar
+    }
+  </button>
+
+  <button
+    type="button"
+    (click)="cancel()"
+    [disabled]="creating()"
+  >
+    Cancelar
+  </button>
+</form>
