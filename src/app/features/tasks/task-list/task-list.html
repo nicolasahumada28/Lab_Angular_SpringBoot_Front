@@ -1,22 +1,62 @@
-<h2>{{title}}</h2>
-Total: {{totalTasks()}}
-Completadas: {{completedTasks()}}
-Pendientes: {{pendingTasks()}}
+<h2>Mis Tareas</h2>
 
-  <app-task-form
-    (taskCreated)="addTask($event)">
-  </app-task-form>
+<nav>
+  <a routerLink="/tasks/new">
+    Nueva tarea
+  </a>
 
-  @for(task of tasks(); track task.id){
+  <button
+    type="button"
+    (click)="loadFromApi()"
+    [disabled]="loading()"
+  >
+    @if (loading()) {
+      Cargando...
+    } @else {
+      Cargar tareas desde API
+    }
+  </button>
+</nav>
 
-  <app-task-item
-    [task]="task"
-    (completeRequest)="completeTask($event)"
-    (deleteRequest)="deleteTask($event)">
-  </app-task-item>
-
-} @empty {
-
-  <p>No existen tareas disponibles.</p>
-
+@if (loading()) {
+  <p>Cargando tareas desde la API...</p>
 }
+
+@if (error(); as errorMessage) {
+  <p class="error-message">
+    Error: {{ errorMessage }}
+  </p>
+}
+
+<section>
+  <p>
+    <strong>Total:</strong>
+    {{ totalTasks() }}
+  </p>
+
+  <p>
+    <strong>Completadas:</strong>
+    {{ completedTasks() }}
+  </p>
+
+  <p>
+    <strong>Pendientes:</strong>
+    {{ pendingTasks() }}
+  </p>
+</section>
+
+<section>
+  @for (task of tasks(); track task.id) {
+    <app-task-item
+      [task]="task"
+      (completeRequest)="completeTask($event)"
+      (deleteRequest)="deleteTask($event)">
+      </app-task-item>
+  } @empty {
+
+    @if (!loading()) {
+      <p>No existen tareas disponibles.</p>
+    }
+
+  }
+</section>

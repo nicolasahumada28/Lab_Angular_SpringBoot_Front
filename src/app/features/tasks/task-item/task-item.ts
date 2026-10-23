@@ -1,8 +1,9 @@
 import { Component, input, output } from '@angular/core';
 import { Task } from '../models/task';
+import { RouterLink } from '@angular/router';
 
 @Component({
-  imports: [],
+  imports: [RouterLink],
   selector: 'app-task-item',
   styleUrl: './task-item.css',
   templateUrl: './task-item.html',

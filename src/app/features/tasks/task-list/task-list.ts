@@ -1,11 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject,OnInit } from '@angular/core';
 import { TaskItem } from '../task-item/task-item';
-import { TaskForm } from '../task-form/task-form';
 import { TaskService } from '../services/task/task';
+import { RouterLink } from '@angular/router';
 
 
 @Component({
-  imports: [TaskItem, TaskForm],
+  imports: [TaskItem, RouterLink],
   selector: 'app-task-list',
   styleUrl: './task-list.css',
   templateUrl: './task-list.html',
@@ -19,13 +19,16 @@ export class TaskList {
   readonly completedTasks = this.taskService.completedTasks;
   readonly pendingTasks = this.taskService.pendingTasks;
 
-  title = 'Mis Tareas';
+  readonly loading = this.taskService.loading;
+  readonly error = this.taskService.error;
 
- 
+  /*constructor() {
+    this.taskService.loadTasksFromApi();
+  }*/
 
-  addTask(title: string): void {
-    this.taskService.addTask(title);
-  };
+    loadFromApi(): void {
+      this.taskService.loadTasksFromApi();
+    }
 
   completeTask(id: number): void {
     this.taskService.completeTask(id);
