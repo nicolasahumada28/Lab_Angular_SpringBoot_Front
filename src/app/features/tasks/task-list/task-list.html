@@ -1,13 +1,13 @@
 <h2>Mis Tareas</h2>
 
 <nav>
-  <a routerLink="/tasks/new">
+  <!--<a routerLink="/tasks/new">
     Nueva tarea
-  </a>
-
+  </a>-->
+  <button type="button" routerLink="/tasks/new">Nueva Tarea</button>
   <button
     type="button"
-    (click)="loadFromApi()"
+    (click)="ngOnInit()"
     [disabled]="loading()"
   >
     @if (loading()) {
@@ -44,7 +44,6 @@
     {{ pendingTasks() }}
   </p>
 </section>
-
 <section>
   @for (task of tasks(); track task.id) {
     <app-task-item

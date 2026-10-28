@@ -39,27 +39,30 @@ export class TaskForm {
       return;
     }
 
-    const title = this.taskform.controls.title.value.trim();
+    const trimTitle = this.taskform.controls.title.value.trim();
 
-    if(title.length <3){
+    if(trimTitle.length <3){
       this.taskform.controls.title.setErrors({
         minLength: {
           requiredLength: 3,
-          actualLength: title.length
+          actualLength: trimTitle.length
         }
       });
       return;
     }
 
     this.taskService
-      .createTaskFromApi(title)
+      .createTask({
+        title: trimTitle,
+        completed: false
+      })
       .subscribe({
         next: () => {
+          console.log('Tarea creada correctamente.');
           this.router.navigate(['/tasks']);
         },
-        error: () => {
-          // El servicio ya establece createError.
-          // No navegamos para que el usuario pueda reintentar.
+        error: error => {
+          console.error('No fue posible crear la tarea: ', error);
         }
       });
   }
