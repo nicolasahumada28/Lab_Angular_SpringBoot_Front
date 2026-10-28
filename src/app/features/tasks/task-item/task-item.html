@@ -1,5 +1,5 @@
 <div class="task-item">
-  <strong>{{ task().title }}</strong>
+  <strong>{{task().title}}</strong>
   @if (task().completed) {
     <span>✅ Completada</span>
   } @else {
@@ -15,5 +15,10 @@
     (click)="onDelete()">
     Eliminar
   </button>
-  <a [routerLink]="['/tasks', task().id]">Ver Detalle</a>
+  <button
+  type="button"
+  (click)="getDetail()">
+    Ver Detalle
+  </button>
+  <!--<a [routerLink]="['/tasks', task().id]">Ver Detalle</a>-->
 </div>

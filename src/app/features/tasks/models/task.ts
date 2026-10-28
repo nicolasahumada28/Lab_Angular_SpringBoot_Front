@@ -10,6 +10,11 @@ export interface CreateTaskRequest {
 }
 
 export interface UpdateTaskRequest {
+    title: string;
+    completed: boolean;
+}
+
+export interface PatchTaskRequest {
     title?: string;
     completed?: boolean;
 }
