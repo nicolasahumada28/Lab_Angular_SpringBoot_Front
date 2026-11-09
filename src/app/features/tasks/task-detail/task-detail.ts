@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { catchError, finalize } from 'rxjs';
 import { sign } from 'node:crypto';
 import { isPlatformBrowser } from '@angular/common';
+import { UpdateTaskRequest } from '../models/task';
 
 @Component({
   imports: [FormsModule],
@@ -113,15 +114,18 @@ export class TaskDetail {
       return;
     }
 
+
+    const request: UpdateTaskRequest = {
+      title: cleanTitle,
+      completed: this.editCompleted
+    };
+
+    console.log('PUT: ', request);
+
     this.updating.set(true);
 
     this.taskService
-      .updateTask(currentTask.id,
-        {
-          title: cleanTitle,
-          completed: this.editCompleted
-        }
-      )
+      .updateTask(currentTask.id, request)
       .pipe(
         finalize(() => {
           this.updating.set(false);

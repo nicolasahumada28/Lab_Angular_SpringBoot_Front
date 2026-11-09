@@ -527,17 +527,11 @@ deleteTask(id: number): Observable<void> {
 
   private replaceTask(updatedTask: Task): void {
     this.tasksSignal.update(tasks =>
-      tasks.map(task => {
-        if (task.id !== updatedTask.id) {
-          return task;
-        }
-
-        return {
-          ...task,
-          ...updatedTask,
-          title: updatedTask.title ?? task.title
-        };
-      })
+      tasks.map(task =>
+        task.id === updatedTask.id
+        ? updatedTask
+        : task
+      )
     );
   }
 }
