@@ -1,20 +1,23 @@
 import { Component, inject} from '@angular/core';
 import { FormControl,
   FormGroup,
-  ReactiveFormsModule,
-  Validators
+  ReactiveFormsModule
  } from '@angular/forms';
  import { Router } from '@angular/router';
  import { TaskService } from '../services/task/task';
-import { minLength } from '@angular/forms/signals';
+import { CreateTaskRequest } from '../models/task';
+import { notBlankValidator } from '../../../validators/not-blank.validator';
+import { TASK_TITLE_VALIDATORS } from '../../../validators/task.validators';
+import { FieldError } from '../../../shared/components/field-error/field-error';
 
 
 @Component({
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, FieldError],
   selector: 'app-task-form',
   styleUrl: './task-form.css',
   templateUrl: './task-form.html',
 })
+
 export class TaskForm {
 
   private readonly taskService = inject(TaskService);
@@ -23,15 +26,25 @@ export class TaskForm {
   readonly creating = this.taskService.creating;
   readonly createError = this.taskService.createError;
 
+  readonly error = this.taskService.error;
+  readonly fieldErrors = this.taskService.fieldErrors;
+
+  clearFieldError(field: string): void {
+    this.taskService.clearFieldError(field);
+  }
+
+
   readonly taskform = new FormGroup({
     title: new FormControl('', {
       nonNullable: true,
-      validators: [
-        Validators.required,
-        Validators.minLength(3)
-      ]
+      validators: TASK_TITLE_VALIDATORS
+    }),
+
+    completed: new FormControl(false, {
+    nonNullable: true
     })
   });
+
 
   onSubmit(): void {
     if(this.taskform.invalid || this.creating()){
@@ -39,30 +52,30 @@ export class TaskForm {
       return;
     }
 
-    const trimTitle = this.taskform.controls.title.value.trim();
+    const formValue = this.taskform.getRawValue();
 
-    if(trimTitle.length <3){
-      this.taskform.controls.title.setErrors({
-        minLength: {
-          requiredLength: 3,
-          actualLength: trimTitle.length
-        }
-      });
-      return;
-    }
+    const request: CreateTaskRequest = {
+      title: formValue.title.trim(),
+      completed: formValue.completed
+    };
 
     this.taskService
-      .createTask({
-        title: trimTitle,
-        completed: false
-      })
-      .subscribe({
-        next: () => {
-          console.log('Tarea creada correctamente.');
-          this.router.navigate(['/tasks']);
+      .createTask(request)
+        .subscribe({
+        next: createdTask => {
+          console.log('Tarea creada: ', createdTask);
+
+          this.taskService.cleanErrors();
+          this.taskform.reset({
+            title: '',
+            completed: false
+          });
+          this.taskform.markAsPristine();
+          this.taskform.markAsUntouched();
         },
+
         error: error => {
-          console.error('No fue posible crear la tarea: ', error);
+          console.log('Error al crear la tarea: ', error);
         }
       });
   }
@@ -76,3 +89,5 @@ export class TaskForm {
 
   }
 }
+
+export { notBlankValidator };

@@ -1,18 +1,21 @@
 import { Component, computed, inject, PLATFORM_ID, signal } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TaskService } from '../services/task/task';
-import { FormsModule } from '@angular/forms';
-import { catchError, finalize } from 'rxjs';
-import { sign } from 'node:crypto';
+import { finalize } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { UpdateTaskRequest } from '../models/task';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { TASK_TITLE_VALIDATORS } from '../../../validators/task.validators';
+import { FieldError } from '../../../shared/components/field-error/field-error';
+
 
 @Component({
-  imports: [FormsModule],
+  imports: [ReactiveFormsModule, FieldError],
   selector: 'app-task-detail',
   styleUrl: './task-detail.css',
   templateUrl: './task-detail.html',
 })
+
 export class TaskDetail {
 
   private readonly route = inject(ActivatedRoute);
@@ -22,10 +25,17 @@ export class TaskDetail {
 
   readonly id = Number(this.route.snapshot.paramMap.get('id'));
 
-  /*readonly task = computed(() => 
-    this.taskService
-    .tasks()
-    .find(task => task.id === this.id));*/
+  //Formulario
+  readonly editForm = new FormGroup({
+    title: new FormControl('', {
+      nonNullable: true,
+      validators: TASK_TITLE_VALIDATORS
+    }),
+
+    completed: new FormControl(false, {
+      nonNullable: true
+    })
+  });
 
   //Tarea Actual
   private readonly taskSignal = signal<Task | null>(null);
@@ -37,9 +47,7 @@ export class TaskDetail {
 
   //Edición
   readonly editing = signal(false);
-  readonly updating = signal(false);
-  editTitle = '';
-  editCompleted = false;
+  readonly updating = this.taskService.updating;
 
   //Eliminación
   readonly deleting = computed(
@@ -48,6 +56,15 @@ export class TaskDetail {
 
   ngOnInit(): void {
     this.loadTask();
+  }
+
+  //Errores
+  readonly fieldErrors = this.taskService.fieldErrors;
+
+  //limpieza de validacion de campos
+  clearFieldError(field: string): void {
+    console.log('TaskDetail clearFieldError: ', field);
+    this.taskService.clearFieldError(field);
   }
 
   //GET by ID
@@ -95,46 +112,55 @@ export class TaskDetail {
       return;
     }
 
-    this.editTitle = currentTask.title;
-    this.editCompleted = currentTask.completed;
+    this.taskService.cleanErrors();
+
+    this.editForm.reset({
+      title: currentTask.title,
+      completed: currentTask.completed
+    })
+
     this.editing.set(true);
   }
 
   cancelEditing(): void {
+
+    if(this.updating()){
+      return;
+    }
+
+    this.taskService.cleanErrors();
+
     this.editing.set(false);
-    this.editTitle = '';
-    this.editCompleted = false;
   }
 
   saveTask(): void {
     const currentTask = this.task();
-    const cleanTitle = this.editTitle.trim();
 
-    if (!currentTask || !cleanTitle || this.updating()) {
+    if (!currentTask || this.updating()){
       return;
     }
 
+    if(this.editForm.invalid){
+      this.editForm.markAllAsTouched();
+    }
+
+
+    const formValue = this.editForm.getRawValue();
 
     const request: UpdateTaskRequest = {
-      title: cleanTitle,
-      completed: this.editCompleted
-    };
+      title: formValue.title.trim(),
+      completed: formValue.completed
+    };    
 
     console.log('PUT: ', request);
 
-    this.updating.set(true);
-
     this.taskService
       .updateTask(currentTask.id, request)
-      .pipe(
-        finalize(() => {
-          this.updating.set(false);
-        })
-      )
       .subscribe({
         next: updatedTask => {
           console.log('Tarea actualizada correctamente: ', updatedTask);
           this.taskSignal.set(updatedTask);
+          this.taskService.cleanErrors();
           this.editing.set(false);
         },
         error: error => {
@@ -154,18 +180,11 @@ export class TaskDetail {
       return;
     }
 
-    this.updating.set(true);
-
     this.taskService
       .patchTask(currentTask.id,
         {
           completed: true
         }
-      )
-      .pipe(
-        finalize(() => {
-          this.updating.set(false);
-        })
       )
       .subscribe({
         next: updatedTask => {
@@ -213,10 +232,4 @@ export class TaskDetail {
   goBack() {
     this.router.navigate(['/tasks']);
   }
-
-  /*constructor() {
-    if (this.taskService.tasks().length === 0) {
-      this.taskService.loadTasksFromApi();
-    }
-  }*/
 }

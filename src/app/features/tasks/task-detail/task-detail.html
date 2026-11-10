@@ -1,75 +1,88 @@
 @if(loading()){
-    <p>Cargando Tarea...</p>
+<p>Cargando Tarea...</p>
 } @else if (loadError()){
-    <div class="error-message">
-        <p>
-            {{loadError()}}
-        </p>
-        <button type="button" (click)="goBack()">Volver a Tareas</button>
-    </div>
+<div class="error-message">
+    <p>
+        {{loadError()}}
+    </p>
+    <button type="button" (click)="goBack()">Volver a Tareas</button>
+</div>
 }
 @else if(task(); as currentTask){
 <section class="task-detail">
     @if(!editing()){
-        <h2>{{currentTask.title}}</h2>
-        <p>ID:
-            {{currentTask.id}}
-        </p>
-        <p>
-            Estado:
-            @if(currentTask.completed){
-            <span>✅ Completada</span>
-            } @else{
-            <span>⏳ Pendiente</span>
-            }
-        </p>
-    
-        @if(!currentTask.completed){
-            <button type="button" (click)="completeTask()" [disabled]="updating()">
-                @if(updating()){
-                    Actualizando...
-                } @else {
-                    Completar
-                }
-            </button>
+    <h2>{{currentTask.title}}</h2>
+    <p>ID:
+        {{currentTask.id}}
+    </p>
+    <p>
+        Estado:
+        @if(currentTask.completed){
+        <span>✅ Completada</span>
+        } @else{
+        <span>⏳ Pendiente</span>
         }
-        <button type="button" (click)="startEditing()" [disabled]="updating() || deleting()">
-            Editar
-        </button>
-        <button type="button" (click)="deleteTask()" [disabled]="deleting() || updating()">
-            @if(deleting()){
-                Eliminando...
+    </p>
+
+    @if(!currentTask.completed){
+    <button type="button" (click)="completeTask()" [disabled]="updating()">
+        @if(updating()){
+        Actualizando...
+        } @else {
+        Completar
+        }
+    </button>
+    }
+    <button type="button" (click)="startEditing()" [disabled]="updating() || deleting()">
+        Editar
+    </button>
+    <button type="button" (click)="deleteTask()" [disabled]="deleting() || updating()">
+        @if(deleting()){
+        Eliminando...
+        } @else {
+        Eliminar
+        }
+    </button>
+    <button type="button" (click)="goBack()">
+        Volver
+    </button>
+    }
+     @else {
+    <h2>Editar Tarea</h2>
+    <form [formGroup]="editForm" (ngSubmit)="saveTask()">
+        <div>
+            <label for="edit-title">Título</label>
+            <input type="text" id="edit-title" formControlName="title"
+            (input)="clearFieldError('title')">
+            <app-field-error 
+            [control]="editForm.controls.title"
+            label="El Título"
+            [backendError]="fieldErrors()['title'] ?? null">
+            </app-field-error>
+        </div>
+        <div>
+            <label for="edit-completed">
+                <input type="checkbox" id="edit-completed" formControlName="completed"
+                    (change)="clearFieldError('completed')">
+                Tarea Completada
+            </label>
+            @if(fieldErrors()['completed']){
+            <div class="field-error">
+                {{fieldErrors()['completed']}}
+            </div>
+            }
+        </div>
+        <button type="submit" [disabled]="updating() || editForm.invalid">
+            @if(updating()){
+            Guardando...
             } @else {
-                Eliminar
+            Guardar
             }
         </button>
-        <button type="button" (click)="goBack()">
-            Volver
+        <button type="button" (click)="cancelEditing()" [disabled]="updating()">
+            Cancelar
         </button>
-    } @else {
-        <h2>Editar Tarea</h2>
-        <form (ngSubmit)="saveTask()">
-            <div>
-                <label for="edit-title">Título</label>
-                <input type="text" id="edit-title" name="editTitle" [(ngModel)]="editTitle" required>
-            </div>
-            <div>
-                <label for="edit-completed">
-                    <input type="checkbox" id="edit-completed" name="editCompleted" [(ngModel)]="editCompleted">
-                    Tarea Completada
-                </label>
-            </div>
-            <button type="submit" [disabled]="updating() || !editTitle.trim()">
-                @if(updating()){
-                    Guardando...
-                } @else {
-                    Guardar
-                }
-            </button>
-            <button type="button" (click)="cancelEditing()" [disabled]="updating()">
-                Cancelar
-            </button>
-        </form>
+    </form>
     }
-    </section>
+</section>
 }
