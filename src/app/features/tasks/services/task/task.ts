@@ -4,6 +4,8 @@ import { isPlatformBrowser } from '@angular/common';
 import { TaskApi } from './task-api';
 import { catchError, finalize, Observable, tap, throwError, timeout } from 'rxjs';
 import { time } from 'node:console';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ApiError } from '../../models/api-error';
 
 @Injectable({
   providedIn: 'root'
@@ -20,6 +22,9 @@ export class TaskService {
 
   private readonly errorSignal = signal<string | null>(null);
   readonly error = this.errorSignal.asReadonly();
+
+  private readonly fieldErrorsSignal = signal<Record<string, string>>({});
+  readonly fieldErrors = this.fieldErrorsSignal.asReadonly();
 
   private readonly creatingSignal = signal(false);
   readonly creating = this.creatingSignal.asReadonly();
@@ -48,27 +53,8 @@ export class TaskService {
   private readonly deleteErrorSignal = signal<string | null>(null);
   readonly deleteError = this.deleteErrorSignal.asReadonly();
 
-  /*private readonly initialTasks: Task[] = [
-    {
-      id: 1,
-      title: 'Estudiar TypeScript',
-      completed: true
-    },
-    {
-      id: 2,
-      title: 'Estudiar Components',
-      completed: false
-    },
-    {
-      id: 3,
-      title: 'Estudiar Routing',
-      completed: false
-    }
-  ]; */
 
-  private readonly tasksSignal = signal<Task[]>(
-    []
-  );
+  private readonly tasksSignal = signal<Task[]>([]);
 
   readonly tasks = this.tasksSignal.asReadonly();
 
@@ -80,27 +66,87 @@ export class TaskService {
 
   private readonly taskApi = inject(TaskApi);
 
-  /*constructor() {
-    effect(() => {
-      const tasks = this.tasksSignal();
+  cleanErrors(): void {
+    this.errorSignal.set(null);
+    this.fieldErrorsSignal.set({});
+  }
 
-      if (!this.isBrowser) {
-        return;
+  clearFieldError(field: string): void {
+
+    console.log(
+    'ANTES clearFieldError:',
+    field,
+    this.fieldErrorsSignal()
+        
+    );
+
+    this.fieldErrorsSignal.update(errors => {
+      if(!(field in errors)){
+        return errors;
       }
 
-      localStorage.setItem(
-        this.storageKey,
-        JSON.stringify(tasks));
+      const updatedErrors = {
+        ...errors
+      };
+
+      delete updatedErrors[field];
+
+      return updatedErrors;
     });
-  }*/
+      console.log(
+      'DESPUÉS clearFieldError:',
+      this.fieldErrorsSignal()
+    );
+  }
+
+  private handleApiError(error: HttpErrorResponse, defaultMessage: string): void {
+    
+    this.cleanErrors();
+
+    if(error.status === 0){
+      this.errorSignal.set('No fue posible conectar con el Backend.');
+
+      return;
+    }
+
+  const apiError = error.error as ApiError;
+
+  if(apiError?.errors && Object.keys(apiError.errors).length > 0){
+
+    this.fieldErrorsSignal.set(apiError.errors);
+    return;
+  }
+  
+  if(apiError?.message){
+    this.errorSignal.set(apiError.message);
+    return;
+  }
+
+  this.errorSignal.set(defaultMessage);
+}
+
+private getApiErrorMessage(error: HttpErrorResponse, defaultMessage: string): string {
+  if(error.status === 0){
+    return 'No fue posible conectar con el Backend.';
+  }
+
+  const apiError = error.error as ApiError;
+
+  if(apiError?.errors && Object.keys(apiError.errors).length > 0){
+    return Object.values(apiError.errors).join(' ');
+  }
+
+  if(apiError?.message){
+    return apiError.message;
+  }
+
+  return defaultMessage;
+
+}  
 
 
   //GET /api/tasks
   loadTasksFromApi(): void {
-
-    /*if(!this.isBrowser) {
-      return;
-    }*/
 
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
@@ -122,95 +168,16 @@ export class TaskService {
       });
     }
 
-  /*getTaskById(id: number): Task | undefined {
-    return this.tasksSignal().find(task => task.id === id);
-  }*/
-
   //GET /api/tasks/{id}
   getTaskByID(id: number): Observable<Task>{
     return this.taskApi.getTaskById(id);
   }
-  
-  /*loadTaskBy(id: number): void {
-    if(!this.isBrowser){
-      return;
-    }
-
-    this.loadingSignal.set(true);
-    this.errorSignal.set(null);
-
-    this.taskApi
-      .getTaskById(id)
-      .pipe(
-        finalize(() => {
-          this.loadingSignal.set(false);
-        })
-      )
-      .subscribe({
-        next: receivedTask => {
-          this.tasksSignal.update(tasks => {
-            const exists = tasks.some(
-              task => task.id === receivedTask.id
-            );
-
-            if(!exists){
-              return [
-                ...tasks,
-                receivedTask
-              ];
-            }
-
-            return tasks.map(task => task.id === receivedTask.id
-              ? receivedTask:task
-            );
-          });
-        },
-        error: error => {
-          console.error(`Error al obtener la tarea ${id}: `, error);
-          this.errorSignal.set('No fue posible obtener la tarea.');
-        }
-      });
-  }*/
-
-  /*addTask(title: string): void {
-    const request: CreateTaskRequest = {
-      title: title.trim(),
-      completed: false
-    };
-
-    if(!request.title){
-      this.errorSignal.set('El título es obligatorio.');
-
-    return;
-    }
-
-    this.loadingSignal.set(true);
-    this.errorSignal.set(null);
-
-    this.taskApi
-      .createTask(request)
-      .pipe(
-        finalize(() => {
-          this.loadingSignal.set(false);
-        })
-      )
-      .subscribe({
-        next: createdTask => {
-          this.tasksSignal.update(task => [
-            ...task,
-            createdTask
-          ]);
-        },
-        error: error =>{
-          console.error('Error al crear la tarea: ',error);
-          this.errorSignal.set('No fue posible crear la tarea.');
-      }
-    });
-  }*/
 
   // POST /api/tasks
   createTask(request: CreateTaskRequest): Observable<Task> {
-    this.errorSignal.set(null);
+
+    this.cleanErrors();
+    this.creatingSignal.set(true);
     
     return this.taskApi
     .createTask(request)
@@ -221,39 +188,26 @@ export class TaskService {
           createdTask
         ]);
       }),
-      catchError(error => {
+      catchError((error: HttpErrorResponse) => {
         console.error('Error al crear la tarea: ', error);
 
-        if(error.status === 404){
-          this.errorSignal.set('La tarea no existe.');
-        } else if(error.status === 0) {
-          this.errorSignal.set('No fue posible conectar con el Backend.');
-        } else {
-          this.errorSignal.set('No fue posible crear la tarea.');
-        }
+        this.handleApiError(
+          error,
+          'No fue posible crear la tarea.'
+        );
 
         return throwError(() => error);
+      }),
+      finalize(() => {
+        this.creatingSignal.set(false);
       })
     );
   }
-
-  /*updateTask(id: number, request: UpdateTaskRequest): void {
-    this.loadingSignal.set(true);
-    this.errorSignal.set(null);
-
-    this.taskApi
-    .updateTask(id, request)
-    .pipe(
-      finalize(() => {
-        this.loadingSignal.set(false);
-      })
-    )
-    ;
-  }*/
   
   //PUT /api/tasks/{id}
   updateTask(id: number, request: UpdateTaskRequest): Observable<Task> {
-    this.errorSignal.set(null);
+    this.cleanErrors();
+    this.updatingSignal.set(true);
 
     return this.taskApi
     .updateTask(id, request)
@@ -261,109 +215,22 @@ export class TaskService {
       tap(updatedTask  => {
         this.replaceTask(updatedTask);
       }),
-      catchError(error => {
+      catchError((error: HttpErrorResponse) => {
         console.error(`Error al actualizar la tarea ${id}: `, error);
 
-        if(error.status === 404){
-          this.errorSignal.set('La tarea no existe.');
-        } else if(error.status === 0){
-          this.errorSignal.set('No fue posible conectar con el Backend.');
-        } else {
-          this.errorSignal.set('No fue posible actualizar la tarea.');
-        }
+        this.handleApiError(
+          error,
+          'No fue posible actualizar la tarea.'
+        );
+        
         return throwError(() => error);
+      }),
+      finalize(() => {
+        this.updatingSignal.set(false);
       })
     );
   }
 
-  /*createTaskFromApi(title: string): Observable<Task> {
-  const cleanTitle = title.trim();
-
-  this.creatingSignal.set(true);
-  this.createErrorSignal.set(null);
-
-  return this.taskApiService
-    .createTask({
-      title: cleanTitle,
-      completed: false
-    })
-    .pipe(
-      timeout(5000),
-
-      tap(createdTask => {
-        this.tasksSignal.update(currentTasks => {
-          const nextId = currentTasks.length === 0
-            ? 1
-            : Math.max(
-                ...currentTasks.map(task => task.id)
-              ) + 1;
-
-          const localTask: Task = {
-            ...createdTask,
-            id: nextId
-          };
-
-          return [
-            ...currentTasks,
-            localTask
-          ];
-        });
-      }),
-
-      catchError(error => {
-        console.error(
-          'Error al crear la tarea:',
-          error
-        );
-
-        this.createErrorSignal.set(
-          'No fue posible crear la tarea.'
-        );
-
-        return throwError(() => error);
-      }),
-
-      finalize(() => {
-        this.creatingSignal.set(false);
-      })
-    );
-}*/
-
-/*completeTaskFromApi(id: number): Observable<Task> {
-
-  this.updatingSignal.set(true);
-  this.updateErrorSignal.set(null);
-
-  return this.taskApiService
-    .updateTask(id, 
-      {
-        completed: true
-      })
-      .pipe(
-        timeout(5000),
-        tap(() => {
-          this.tasksSignal.update(tasks =>
-            tasks.map(task =>
-              task.id === id
-              ? {
-                ...task,
-                completed: true
-              }
-              : task
-            )
-          );
-        }),
-        
-        catchError(error => {
-          console.error('Error al actualizar la tarea: ', error);
-          this.updateErrorSignal.set('No fue posible actualizar la tarea.');
-          return throwError(() => error);
-        }),
-        finalize(() => {
-          this.updatingSignal.set(false);
-        })
-      );
-}*/
 
 //PATCH /api/tasks/{id}
 patchTask(id: number, request: PatchTaskRequest): Observable<Task> {
@@ -375,16 +242,13 @@ patchTask(id: number, request: PatchTaskRequest): Observable<Task> {
     tap(patchedTask => {
       this.replaceTask(patchedTask);
     }),
-    catchError(error => {
+    catchError((error: HttpErrorResponse) => {
       console.error(`Error al actualizar la tarea ${id}: `,error);
 
-      if(error.status === 404){
-        this.errorSignal.set('La tarea no existe.');
-      } else if(error.status === 0){
-        this.errorSignal.set('No fue posible conectar con el Backend.');
-      } else {
-        this.errorSignal.set('No fue posible actualizar la tarea.');
-      }
+      this.handleApiError(
+        error,
+        'No fue posible actualizar la tarea.'
+      );
 
       return throwError(() => error);
     })
@@ -527,17 +391,11 @@ deleteTask(id: number): Observable<void> {
 
   private replaceTask(updatedTask: Task): void {
     this.tasksSignal.update(tasks =>
-      tasks.map(task => {
-        if (task.id !== updatedTask.id) {
-          return task;
-        }
-
-        return {
-          ...task,
-          ...updatedTask,
-          title: updatedTask.title ?? task.title
-        };
-      })
+      tasks.map(task =>
+        task.id === updatedTask.id
+        ? updatedTask
+        : task
+      )
     );
   }
 }

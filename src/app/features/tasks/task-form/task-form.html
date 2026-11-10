@@ -10,30 +10,19 @@
     </label>
 
     <input
-      id="title"
       type="text"
+      id="title"
+      name="title"
       formControlName="title"
       placeholder="Ingrese una tarea"
-      [readonly]="creating()"
+      (input)="clearFieldError('title')"
+      [readonly]="creating()"      
     />
-
-    @if (
-      taskform.controls.title.touched &&
-      taskform.controls.title.hasError('required')
-    ) {
-      <p class="error-message">
-        El título es obligatorio.
-      </p>
-    }
-
-    @if (
-      taskform.controls.title.touched &&
-      taskform.controls.title.hasError('minlength')
-    ) {
-      <p class="error-message">
-        El título debe tener al menos 3 caracteres.
-      </p>
-    }
+    <app-field-error 
+    [control]="taskform.controls.title"
+    label="El Título"
+    [backendError]="fieldErrors()['title'] ?? null">
+    </app-field-error>
   </div>
 
   @if (createError(); as errorMessage) {
