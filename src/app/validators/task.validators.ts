@@ -8,3 +8,7 @@ export const TASK_TITLE_VALIDATORS = [
     Validators.minLength(3),
     Validators.maxLength(100)
 ];
+
+export const TASK_DESCRIPTION_VALIDATORS = [
+    Validators.maxLength(500)
+];

@@ -1,5 +1,5 @@
 import { computed, effect, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
-import { CreateTaskRequest, PatchTaskRequest, Task, UpdateTaskRequest } from '../../models/task';
+import { CreateTaskRequest, PatchTaskRequest, Task, PutTaskRequest } from '../../models/task';
 import { isPlatformBrowser } from '@angular/common';
 import { TaskApi } from './task-api';
 import { catchError, finalize, Observable, tap, throwError, timeout } from 'rxjs';
@@ -73,13 +73,6 @@ export class TaskService {
 
   clearFieldError(field: string): void {
 
-    console.log(
-    'ANTES clearFieldError:',
-    field,
-    this.fieldErrorsSignal()
-        
-    );
-
     this.fieldErrorsSignal.update(errors => {
       if(!(field in errors)){
         return errors;
@@ -93,10 +86,6 @@ export class TaskService {
 
       return updatedErrors;
     });
-      console.log(
-      'DESPUÉS clearFieldError:',
-      this.fieldErrorsSignal()
-    );
   }
 
   private handleApiError(error: HttpErrorResponse, defaultMessage: string): void {
@@ -205,7 +194,7 @@ private getApiErrorMessage(error: HttpErrorResponse, defaultMessage: string): st
   }
   
   //PUT /api/tasks/{id}
-  updateTask(id: number, request: UpdateTaskRequest): Observable<Task> {
+  updateTask(id: number, request: PutTaskRequest): Observable<Task> {
     this.cleanErrors();
     this.updatingSignal.set(true);
 

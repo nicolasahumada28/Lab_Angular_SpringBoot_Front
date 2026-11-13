@@ -1,16 +1,16 @@
 import { Component, computed, inject, PLATFORM_ID, signal } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
-import { TaskService } from '../services/task/task';
+import { TaskService } from '../services/task/task-service';
 import { finalize } from 'rxjs';
-import { isPlatformBrowser } from '@angular/common';
-import { UpdateTaskRequest } from '../models/task';
+import { DatePipe, isPlatformBrowser } from '@angular/common';
+import { PutTaskRequest, Task, TaskPriority } from '../models/task';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { TASK_TITLE_VALIDATORS } from '../../../validators/task.validators';
+import { TASK_DESCRIPTION_VALIDATORS, TASK_TITLE_VALIDATORS } from '../../../validators/task.validators';
 import { FieldError } from '../../../shared/components/field-error/field-error';
 
 
 @Component({
-  imports: [ReactiveFormsModule, FieldError],
+  imports: [ReactiveFormsModule, FieldError, DatePipe],
   selector: 'app-task-detail',
   styleUrl: './task-detail.css',
   templateUrl: './task-detail.html',
@@ -32,7 +32,22 @@ export class TaskDetail {
       validators: TASK_TITLE_VALIDATORS
     }),
 
+    description: new FormControl('', {
+      validators: TASK_DESCRIPTION_VALIDATORS
+    }),
+
+    priority: new FormControl<TaskPriority>('MEDIUM', {
+      nonNullable: true,
+      validators: [
+        Validators.required
+      ]
+    }),
+
     completed: new FormControl(false, {
+      nonNullable: true
+    }),
+
+    dueDate: new FormControl('',{
       nonNullable: true
     })
   });
@@ -43,7 +58,10 @@ export class TaskDetail {
 
   //Estado de carga
   readonly loading = signal(false);
-  readonly loadError = signal<String | null>(null);
+  readonly loadError = signal<string | null>(null);
+
+  //error de accion
+  readonly actionError = signal<string | null>(null);
 
   //Edición
   readonly editing = signal(false);
@@ -112,11 +130,15 @@ export class TaskDetail {
       return;
     }
 
+    this.actionError.set(null);
     this.taskService.cleanErrors();
 
     this.editForm.reset({
       title: currentTask.title,
-      completed: currentTask.completed
+      description: currentTask.description ?? '',
+      priority: currentTask.priority ?? 'MEDIUM',
+      completed: currentTask.completed,
+      dueDate: currentTask.dueDate ?? ''
     })
 
     this.editing.set(true);
@@ -124,7 +146,7 @@ export class TaskDetail {
 
   cancelEditing(): void {
 
-    if(this.updating()){
+    if (this.updating()) {
       return;
     }
 
@@ -133,24 +155,32 @@ export class TaskDetail {
     this.editing.set(false);
   }
 
+  // SAVE
   saveTask(): void {
     const currentTask = this.task();
 
-    if (!currentTask || this.updating()){
+    if (!currentTask || this.updating()) {
       return;
     }
 
-    if(this.editForm.invalid){
+    if (this.editForm.invalid) {
       this.editForm.markAllAsTouched();
+      return;
     }
 
 
     const formValue = this.editForm.getRawValue();
+    const description = formValue.description?.trim() || null;
+    const priority = formValue.priority;
+    const dueDate = formValue.dueDate || null;
 
-    const request: UpdateTaskRequest = {
+    const request: PutTaskRequest = {
       title: formValue.title.trim(),
-      completed: formValue.completed
-    };    
+      description,
+      priority,
+      completed: formValue.completed,
+      dueDate
+    };
 
     console.log('PUT: ', request);
 
@@ -173,27 +203,51 @@ export class TaskDetail {
   completeTask(): void {
     const currentTask = this.task();
 
-    if (!currentTask ||
-      currentTask.completed ||
-      this.updating()
-    ) {
+    if (!currentTask || currentTask.completed || this.updating()) {
       return;
     }
+
+    this.actionError.set(null);
+
+    if(!currentTask.priority) {
+      this.actionError.set('Esta Tarea no tiene una prioridad asignada. Edítala y selecciona una prioridad antes de completarla.');
+      return;
+    }    
 
     this.taskService
       .patchTask(currentTask.id,
         {
+
           completed: true
         }
       )
       .subscribe({
         next: updatedTask => {
           console.log('Tarea actualizada correctamente: ', updatedTask);
-          this.editing.set(false);
           this.taskSignal.set(updatedTask);
+          this.actionError.set(null);
         },
         error: error => {
           console.error('No fue posible completar la tarea: ', error);
+
+          if (error.status === 404) {
+            this.actionError.set(
+              'La tarea solicitada ya no existe.'
+            );
+          } else if (error.status === 400) {
+            this.actionError.set(
+              error.error?.message ??
+              'No fue posible completar la tarea porque contiene datos inválidos.'
+            );
+          } else if (error.status === 0) {
+            this.actionError.set(
+              'No fue posible conectar con el Backend.'
+            );
+          } else {
+            this.actionError.set(
+              'No fue posible completar la tarea. Inténtalo nuevamente.'
+            );
+          }
         }
       });
   }
@@ -227,6 +281,15 @@ export class TaskDetail {
           console.error('Error al eliminar la tarea: ', error);
         }
       });
+  }
+
+  //Formateador de fecha
+  formDate(date: string | null): string {
+    if(!date){
+      return 'Sin Fecha de Vencimiento';
+    }
+    const [year, month, day] = date.split('-');
+    return `${day}/${month}/${year}`;
   }
 
   goBack() {

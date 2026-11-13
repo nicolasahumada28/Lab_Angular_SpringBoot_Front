@@ -1,13 +1,14 @@
 import { Component, inject} from '@angular/core';
 import { FormControl,
   FormGroup,
-  ReactiveFormsModule
+  ReactiveFormsModule,
+  Validators
  } from '@angular/forms';
  import { Router } from '@angular/router';
- import { TaskService } from '../services/task/task';
-import { CreateTaskRequest } from '../models/task';
+ import { TaskService } from '../services/task/task-service';
+import { TaskPriority, CreateTaskRequest } from '../models/task';
 import { notBlankValidator } from '../../../validators/not-blank.validator';
-import { TASK_TITLE_VALIDATORS } from '../../../validators/task.validators';
+import { TASK_DESCRIPTION_VALIDATORS, TASK_TITLE_VALIDATORS } from '../../../validators/task.validators';
 import { FieldError } from '../../../shared/components/field-error/field-error';
 
 
@@ -40,8 +41,24 @@ export class TaskForm {
       validators: TASK_TITLE_VALIDATORS
     }),
 
+    description: new FormControl('', {
+      nonNullable: true,
+      validators: TASK_DESCRIPTION_VALIDATORS
+    }),
+
+    priority: new FormControl<TaskPriority>('MEDIUM', {
+      nonNullable: true,
+      validators: [
+        Validators.required
+      ]
+    }),
+
     completed: new FormControl(false, {
     nonNullable: true
+    }),
+
+    dueDate: new FormControl('',{
+      nonNullable: true
     })
   });
 
@@ -53,10 +70,15 @@ export class TaskForm {
     }
 
     const formValue = this.taskform.getRawValue();
+    const description = formValue.description.trim() || null;
+    const dueDate = formValue.dueDate || null;
 
     const request: CreateTaskRequest = {
       title: formValue.title.trim(),
-      completed: formValue.completed
+      description,
+      priority: formValue.priority,
+      completed: formValue.completed,
+      dueDate: dueDate
     };
 
     this.taskService
@@ -68,6 +90,7 @@ export class TaskForm {
           this.taskService.cleanErrors();
           this.taskform.reset({
             title: '',
+            description: '',
             completed: false
           });
           this.taskform.markAsPristine();

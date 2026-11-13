@@ -1,5 +1,4 @@
 <h2>Nueva tarea</h2>
-
 <form
   [formGroup]="taskform"
   (ngSubmit)="onSubmit()"
@@ -23,6 +22,46 @@
     label="El Título"
     [backendError]="fieldErrors()['title'] ?? null">
     </app-field-error>
+  </div>
+  <div>
+    <label for="description">Descripción</label>
+    <textarea id="description"
+    formControlName="description"
+    rows="4"
+    (input)="clearFieldError('description')">
+    </textarea>
+    <app-field-error
+    [control]="taskform.controls.description"
+    label="La Descripción"
+    [backendError]="fieldErrors()['description'] ?? null">
+    </app-field-error>
+  </div>
+  <div>
+    <label for="priority">Prioridad</label>
+    <select id="priority"
+    formControlName="priority"
+    (change)="clearFieldError('priority')">
+      <option value="LOW">Baja</option>
+      <option value="MEDIUM">Media</option>
+      <option value="HIGH">Alta</option>
+    </select>
+    <app-field-error
+    [control]="taskform.controls.priority"
+    label="La Prioridad"
+    [backendError]="fieldErrors()['priority'] ?? null">
+    </app-field-error>
+  </div>
+  <div>
+      <label for="dueDate">Fecha de vencimiento</label>
+      <input type="date"
+      id="dueDate"
+      formControlName="dueDate"
+      (change)="clearFieldError('dueDate')">
+      <app-field-error
+      [control]="taskform.controls.dueDate"
+      label="La Fecha de vencimiento"
+      [backendError]="fieldErrors()['dueDate'] ?? null">
+      </app-field-error>
   </div>
 
   @if (createError(); as errorMessage) {

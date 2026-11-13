@@ -12,6 +12,48 @@
 <section class="task-detail">
     @if(!editing()){
     <h2>{{currentTask.title}}</h2>
+    @if(currentTask.description) {
+    <p>
+        <strong>Descripción:</strong>
+        {{currentTask.description}}
+    </p>
+    } @else {
+    <p>
+        <strong>Descripción:</strong>
+        Sin descripción
+    </p>
+    }
+    <p>
+        <strong>Prioridad:</strong>
+        @switch (currentTask.priority) {
+        @case ('LOW') {
+        <span style="color: green;">Baja</span>
+        }
+        @case ('MEDIUM') {
+        <span style="color: yellow;">Media</span>
+        }
+        @case ('HIGH') {
+        <span style="color: red;">Alta</span>
+        }
+        }
+    </p>
+    @if(currentTask.dueDate){
+    <P>
+        <strong>Fecha de vencimiento:</strong>
+        {{formDate(currentTask.dueDate)}}
+    </P>
+    } @else {
+        <strong>Fecha de vencimiento:</strong>
+        Sin Fecha de vencimiento
+    }
+    <p>
+        <strong>Creada:</strong>
+        {{currentTask.createdAt | date: 'dd/MM/yyyy HH:mm:ss'}}
+    </p>
+    <p>
+        <strong>Última Modificación:</strong>
+        {{currentTask.updatedAt | date: 'dd/MM/yyyy HH:mm:ss'}}
+    </p>
     <p>ID:
         {{currentTask.id}}
     </p>
@@ -33,6 +75,11 @@
         }
     </button>
     }
+    @if(actionError()) {
+    <div class="error-message">
+        {{actionError()}}
+    </div>
+    }
     <button type="button" (click)="startEditing()" [disabled]="updating() || deleting()">
         Editar
     </button>
@@ -47,17 +94,41 @@
         Volver
     </button>
     }
-     @else {
+    @else {
     <h2>Editar Tarea</h2>
     <form [formGroup]="editForm" (ngSubmit)="saveTask()">
         <div>
             <label for="edit-title">Título</label>
-            <input type="text" id="edit-title" formControlName="title"
-            (input)="clearFieldError('title')">
-            <app-field-error 
-            [control]="editForm.controls.title"
-            label="El Título"
-            [backendError]="fieldErrors()['title'] ?? null">
+            <input type="text" id="edit-title" formControlName="title" (input)="clearFieldError('title')">
+            <app-field-error [control]="editForm.controls.title" label="El Título"
+                [backendError]="fieldErrors()['title'] ?? null">
+            </app-field-error>
+        </div>
+        <div>
+            <label for="edit-description">Descripción</label>
+            <textarea id="description" formControlName="description" rows="4" (input)="clearFieldError('description')">
+            </textarea>
+            <app-field-error [control]="editForm.controls.description" label="La Descripción"
+                [backendError]="fieldErrors()['description'] ?? null">
+            </app-field-error>
+        </div>
+        <div>
+            <label for="edit-priority">Prioridad</label>
+            <select id="priority" formControlName="priority" (change)="clearFieldError('priority')">
+                <option value="LOW">Baja</option>
+                <option value="MEDIUM">Media</option>
+                <option value="HIGH">Alta</option>
+            </select>
+            <app-field-error [control]="editForm.controls.priority" label="La Prioridad"
+                [backendError]="fieldErrors()['priority']">
+            </app-field-error>
+        </div>
+        <div>
+            <label for="edit-dueDate">Fecha de vencimiento</label>
+            <input id="edit-dueDate" type="date" formControlName="dueDate"
+                (change)="clearFieldError('dueDate')">
+            <app-field-error [control]="editForm.controls.dueDate" label="La Fecha Límite"
+                [backendError]="fieldErrors()['dueDate'] ?? null">
             </app-field-error>
         </div>
         <div>

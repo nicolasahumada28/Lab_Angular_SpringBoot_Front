@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { TaskItem } from '../task-item/task-item';
-import { TaskService } from '../services/task/task';
+import { TaskService } from '../services/task/task-service';
 import { RouterLink } from '@angular/router';
 import { subscribe } from 'diagnostics_channel';
 
