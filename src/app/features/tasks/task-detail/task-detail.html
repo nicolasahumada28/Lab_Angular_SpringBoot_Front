@@ -1,44 +1,159 @@
-<h2>Detalle de Tarea</h2>
-@if(task(); as currentTask){
-<article>
-    <p><strong>ID:</strong> {{currentTask.id}}</p>
-    <p><strong>Título:</strong> {{currentTask.title}}</p>
-    <p><strong>Estado:</strong>
-        @if(currentTask.completed){
-        Completada
-        } @else{
-        Pendiente
+@if(loading()){
+<p>Cargando Tarea...</p>
+} @else if (loadError()){
+<div class="error-message">
+    <p>
+        {{loadError()}}
+    </p>
+    <button type="button" (click)="goBack()">Volver a Tareas</button>
+</div>
+}
+@else if(task(); as currentTask){
+<section class="task-detail">
+    @if(!editing()){
+    <h2>{{currentTask.title}}</h2>
+    @if(currentTask.description) {
+    <p>
+        <strong>Descripción:</strong>
+        {{currentTask.description}}
+    </p>
+    } @else {
+    <p>
+        <strong>Descripción:</strong>
+        Sin descripción
+    </p>
+    }
+    <p>
+        <strong>Prioridad:</strong>
+        @switch (currentTask.priority) {
+        @case ('LOW') {
+        <span style="color: green;">Baja</span>
+        }
+        @case ('MEDIUM') {
+        <span style="color: yellow;">Media</span>
+        }
+        @case ('HIGH') {
+        <span style="color: red;">Alta</span>
+        }
         }
     </p>
-    @if(updateError(); as errorMessage) {
-    <p class="error-message">
-        {{errorMessage}}
+    @if(currentTask.dueDate){
+    <P>
+        <strong>Fecha de vencimiento:</strong>
+        {{formDate(currentTask.dueDate)}}
+    </P>
+    } @else {
+        <strong>Fecha de vencimiento:</strong>
+        Sin Fecha de vencimiento
+    }
+    <p>
+        <strong>Creada:</strong>
+        {{currentTask.createdAt | date: 'dd/MM/yyyy HH:mm:ss'}}
     </p>
-    }
-    @if(deleteError(); as errorMessage){
-        <p class="error-message">
-            {{errorMessage}}
-        </p>
-    }
+    <p>
+        <strong>Última Modificación:</strong>
+        {{currentTask.updatedAt | date: 'dd/MM/yyyy HH:mm:ss'}}
+    </p>
+    <p>ID:
+        {{currentTask.id}}
+    </p>
+    <p>
+        Estado:
+        @if(currentTask.completed){
+        <span>✅ Completada</span>
+        } @else{
+        <span>⏳ Pendiente</span>
+        }
+    </p>
+
     @if(!currentTask.completed){
     <button type="button" (click)="completeTask()" [disabled]="updating()">
         @if(updating()){
         Actualizando...
         } @else {
-        Marcar como completada
+        Completar
         }
     </button>
     }
-    <button type="button" (click)="deleteTask()" [disabled]="updating() || deleting()">
+    @if(actionError()) {
+    <div class="error-message">
+        {{actionError()}}
+    </div>
+    }
+    <button type="button" (click)="startEditing()" [disabled]="updating() || deleting()">
+        Editar
+    </button>
+    <button type="button" (click)="deleteTask()" [disabled]="deleting() || updating()">
         @if(deleting()){
-            Eliminando...
+        Eliminando...
         } @else {
-            Eliminar Tarea
+        Eliminar
         }
     </button>
-</article>
-} @else{
-<p>No se encontó Tarea con el ID {{id}}</p>
+    <button type="button" (click)="goBack()">
+        Volver
+    </button>
+    }
+    @else {
+    <h2>Editar Tarea</h2>
+    <form [formGroup]="editForm" (ngSubmit)="saveTask()">
+        <div>
+            <label for="edit-title">Título</label>
+            <input type="text" id="edit-title" formControlName="title" (input)="clearFieldError('title')">
+            <app-field-error [control]="editForm.controls.title" label="El Título"
+                [backendError]="fieldErrors()['title'] ?? null">
+            </app-field-error>
+        </div>
+        <div>
+            <label for="edit-description">Descripción</label>
+            <textarea id="description" formControlName="description" rows="4" (input)="clearFieldError('description')">
+            </textarea>
+            <app-field-error [control]="editForm.controls.description" label="La Descripción"
+                [backendError]="fieldErrors()['description'] ?? null">
+            </app-field-error>
+        </div>
+        <div>
+            <label for="edit-priority">Prioridad</label>
+            <select id="priority" formControlName="priority" (change)="clearFieldError('priority')">
+                <option value="LOW">Baja</option>
+                <option value="MEDIUM">Media</option>
+                <option value="HIGH">Alta</option>
+            </select>
+            <app-field-error [control]="editForm.controls.priority" label="La Prioridad"
+                [backendError]="fieldErrors()['priority']">
+            </app-field-error>
+        </div>
+        <div>
+            <label for="edit-dueDate">Fecha de vencimiento</label>
+            <input id="edit-dueDate" type="date" formControlName="dueDate"
+                (change)="clearFieldError('dueDate')">
+            <app-field-error [control]="editForm.controls.dueDate" label="La Fecha Límite"
+                [backendError]="fieldErrors()['dueDate'] ?? null">
+            </app-field-error>
+        </div>
+        <div>
+            <label for="edit-completed">
+                <input type="checkbox" id="edit-completed" formControlName="completed"
+                    (change)="clearFieldError('completed')">
+                Tarea Completada
+            </label>
+            @if(fieldErrors()['completed']){
+            <div class="field-error">
+                {{fieldErrors()['completed']}}
+            </div>
+            }
+        </div>
+        <button type="submit" [disabled]="updating() || editForm.invalid">
+            @if(updating()){
+            Guardando...
+            } @else {
+            Guardar
+            }
+        </button>
+        <button type="button" (click)="cancelEditing()" [disabled]="updating()">
+            Cancelar
+        </button>
+    </form>
+    }
+</section>
 }
-<button type="button" (click)="goBack()" [disabled]="updating()">Volver a la lista
-</button>

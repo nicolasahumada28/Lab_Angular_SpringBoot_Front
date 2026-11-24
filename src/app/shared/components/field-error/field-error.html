@@ -1,0 +1,33 @@
+@if (control.touched || control.dirty) {
+
+  @if (control.hasError('required')) {
+    <div class="field-error">
+      {{ label }} es obligatorio
+    </div>
+  }
+  @else if (control.hasError('notBlank')) {
+    <div class="field-error">
+      {{ label }} no puede contener solo espacios
+    </div>
+  }
+  @else if (control.hasError('minlength')) {
+    <div class="field-error">
+      {{ label }} debe tener al menos
+      {{ control.getError('minlength').requiredLength }}
+      caracteres
+    </div>
+  }
+  @else if (control.hasError('maxlength')) {
+    <div class="field-error">
+      {{ label }} no debe superar los
+      {{ control.getError('maxlength').requiredLength }}
+      caracteres
+    </div>
+  }
+}
+
+@if (control.valid && backendError) {
+  <div class="field-error">
+    {{ backendError }}
+  </div>
+}
